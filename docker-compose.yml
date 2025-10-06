@@ -1,0 +1,85 @@
+version: '3.8'
+
+services:
+  # NGINX API Gateway
+  nginx:
+    image: nginx:alpine
+    container_name: api-gateway
+    ports:
+      - "8080:80"
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+      - nginx-cache:/var/cache/nginx
+      - nginx-logs:/var/log/nginx
+    depends_on:
+      - price-service-1
+      - price-service-2
+      - price-service-3
+    networks:
+      - api-network
+    restart: unless-stopped
+
+  # Backend Service Instance 1
+  price-service-1:
+    build: .
+    container_name: price-service-1
+    environment:
+      - APP_ENV=production
+      - LOG_LEVEL=INFO
+      - SERVICE_INSTANCE=1
+    ports:
+      - "8000:8000"
+    networks:
+      - api-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/healthz"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+    restart: unless-stopped
+
+  # Backend Service Instance 2 (backup)
+  price-service-2:
+    build: .
+    container_name: price-service-2
+    environment:
+      - APP_ENV=production
+      - LOG_LEVEL=INFO
+      - SERVICE_INSTANCE=2
+    ports:
+      - "8001:8000"
+    networks:
+      - api-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/healthz"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+    restart: unless-stopped
+
+  # Backend Service Instance 3 (backup)
+  price-service-3:
+    build: .
+    container_name: price-service-3
+    environment:
+      - APP_ENV=production
+      - LOG_LEVEL=INFO
+      - SERVICE_INSTANCE=3
+    ports:
+      - "8002:8000"
+    networks:
+      - api-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/healthz"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+    restart: unless-stopped
+
+networks:
+  api-network:
+    driver: bridge
+
+volumes:
+  nginx-cache:
+  nginx-logs:
